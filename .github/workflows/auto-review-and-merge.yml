@@ -1,0 +1,38 @@
+name: Auto Review & Merge (Reviewer Bot)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review-and-merge:
+    runs-on: ubuntu-latest
+
+    # Prevent infinite loops
+    if: github.actor == 'TharaniDJ'
+
+    steps:
+      - name: Approve PR as reviewer bot
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.REVIEWER_BOT_TOKEN }}
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              event: "APPROVE",
+              body: "Auto-approved by reviewer bot"
+            });
+
+      - name: Merge PR as reviewer bot
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.REVIEWER_BOT_TOKEN }}
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              merge_method: "squash"
+            });

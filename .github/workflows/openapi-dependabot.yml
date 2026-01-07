@@ -48,7 +48,7 @@ jobs:
           git checkout -b "${BRANCH_NAME}"
           
           # Add changed files
-          git add specs/ repos.json UPDATE_SUMMARY.txt
+          git add openapi/ repos.json UPDATE_SUMMARY.txt
           
           # Create commit message
           UPDATE_SUMMARY=$(cat UPDATE_SUMMARY.txt)

@@ -204,8 +204,9 @@ public function main() returns error? {
                 if hasVersionChanged(repo.lastVersion, tagName) {
                     io:println(string `  ✅ UPDATE AVAILABLE!`);
                     
-                    // Define local path for the spec (relative to api-specs root)
-                    string localPath = string `../specs/${repo.owner}/${repo.repo}/${repo.releaseAssetName}`;
+                    // Define local path for the spec in the openapi folder (relative to api-specs root)
+                    // Pattern: openapi/{owner}/{repo}/{version}/{specfile}
+                    string localPath = string `../openapi/${repo.owner}/${repo.repo}/${tagName}/${repo.releaseAssetName}`;
                     
                     // Download the spec
                     error? downloadResult = downloadSpec(

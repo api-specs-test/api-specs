@@ -1,3 +1,1 @@
 - Stripe OpenAPI: v1000 → v2150
-- Twilio OpenAPI: 1.51.0 → 2.6.1
-- OpenAI OpenAPI: 1.0.0 → 2.0.0

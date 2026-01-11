@@ -16,5 +16,5 @@ jobs:
       ballerina-version: "2201.13.0"
       quiet-mode: true
     secrets:
-      BALLERINA_BOT_TOKEN: ${{ secrets.BALLERINA_BOT_TOKEN }}
+      BALLERINA_BOT_TOKEN: ${{ secrets.REVIEWER_BOT_TOKEN }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

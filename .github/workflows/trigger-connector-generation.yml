@@ -18,4 +18,3 @@ jobs:
     secrets:
       BALLERINA_BOT_TOKEN: ${{ secrets.BALLERINA_BOT_TOKEN }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

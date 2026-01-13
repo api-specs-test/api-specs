@@ -1,1 +1,1 @@
-- Stripe OpenAPI: v1050 → v2150
+- OpenAI OpenAPI: 1.0.0 → 2.0.0

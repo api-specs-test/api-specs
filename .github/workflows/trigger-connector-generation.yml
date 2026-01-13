@@ -8,10 +8,87 @@ on:
   workflow_dispatch:
 
 jobs:
-  call-generator:
+  detect-updated-specs:
+    runs-on: ubuntu-latest
+    outputs:
+      specs: ${{ steps.find-specs.outputs.specs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Find updated OpenAPI specs
+        id: find-specs
+        run: |
+          # Get changed files in openapi/ directory from the last commit
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep "^openapi/" || true)
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No OpenAPI specs updated"
+            echo "specs=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Extract unique spec paths (find .yaml, .yml, .json files)
+          SPEC_PATHS=$(echo "$CHANGED_FILES" | grep -E '\.(yaml|yml|json)$' || true)
+          
+          if [ -z "$SPEC_PATHS" ]; then
+            echo "No OpenAPI spec files found in changes"
+            echo "specs=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Build JSON array of specs with metadata
+          SPECS_JSON="["
+          FIRST=true
+          
+          while IFS= read -r spec_path; do
+            if [ -f "$spec_path" ]; then
+              # Extract: openapi/{owner}/{repo}/{version}/{file}
+              # Example: openapi/stripe/openapi/2024-06-20/spec3.yaml
+              OWNER=$(echo "$spec_path" | cut -d'/' -f2)
+              REPO=$(echo "$spec_path" | cut -d'/' -f3)
+              VERSION=$(echo "$spec_path" | cut -d'/' -f4)
+              
+              # Build raw GitHub URL
+              SPEC_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/${spec_path}"
+              
+              # Connector name: owner_repo (e.g., stripe_openapi)
+              CONNECTOR_NAME="${OWNER}_${REPO}"
+              
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                SPECS_JSON="${SPECS_JSON},"
+              fi
+              
+              SPECS_JSON="${SPECS_JSON}{\"url\":\"${SPEC_URL}\",\"name\":\"${CONNECTOR_NAME}\",\"owner\":\"${OWNER}\",\"repo\":\"${REPO}\",\"version\":\"${VERSION}\"}"
+            fi
+          done <<< "$SPEC_PATHS"
+          
+          SPECS_JSON="${SPECS_JSON}]"
+          
+          echo "Detected specs:"
+          echo "$SPECS_JSON" | jq '.'
+          
+          # Output for matrix
+          echo "specs=${SPECS_JSON}" >> $GITHUB_OUTPUT
+
+  generate-connector:
+    needs: detect-updated-specs
+    if: needs.detect-updated-specs.outputs.specs != '[]'
+    strategy:
+      matrix:
+        spec: ${{ fromJson(needs.detect-updated-specs.outputs.specs) }}
+      fail-fast: false
     uses: ballerina-library-test/ballerina-library/.github/workflows/auto-generate-connector.yml@main
     with:
-      openapi-url: https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/openai/openai-openapi/2.0.0/openapi.yaml
+      openapi-url: ${{ matrix.spec.url }}
+      connector-name: ${{ matrix.spec.name }}
       ballerina-version: "2201.13.0"
       quiet-mode: true
     secrets:

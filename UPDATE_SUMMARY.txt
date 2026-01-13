@@ -1,1 +1,1 @@
-- Stripe OpenAPI: v1000 → v2150
+- Stripe OpenAPI: v1050 → v2150

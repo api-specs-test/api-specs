@@ -12,7 +12,7 @@ jobs:
   call-generator:
     uses: ballerina-library-test/ballerina-library/.github/workflows/auto-generate-connector.yml@main
     with:
-      openapi-url: https://raw.githubusercontent.com/api-specs-test/api-specs/main/specs/openapi.yaml
+      openapi-url: https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/openai/openai-openapi/2.0.0/openapi.yaml
       ballerina-version: "2201.13.0"
       quiet-mode: true
     secrets:

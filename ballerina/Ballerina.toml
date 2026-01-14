@@ -1,0 +1,7 @@
+[package]
+org = "ballerina_library_test"
+name = "generated_connector"
+version = "0.1.0"
+
+[build-options]
+observabilityIncluded = true

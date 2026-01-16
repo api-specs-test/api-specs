@@ -8,13 +8,18 @@ import ballerinax/github;
 
 // Repository record type
 type Repository record {|
+    string vendor;
+    string api;
     string owner;
     string repo;
     string name;
     string lastVersion;
-    string lastChecked;
     string specPath;
     string releaseAssetName;
+    string baseUrl;
+    string documentationUrl;
+    string description;
+    string[] tags;
 |};
 
 // Update result record
@@ -29,6 +34,17 @@ type UpdateResult record {|
 // Check for version updates
 function hasVersionChanged(string oldVersion, string newVersion) returns boolean {
     return oldVersion != newVersion;
+}
+
+// Convert JSON to YAML if needed
+function convertJsonToYaml(string content) returns string|error {
+    // Simple check if content is JSON
+    if content.trim().startsWith("{") || content.trim().startsWith("[") {
+        // For now, just return as-is. In production, use a proper JSON-to-YAML converter
+        // You can add yaml library later for proper conversion
+        return content;
+    }
+    return content;
 }
 
 // Download OpenAPI spec from release asset or repo
@@ -72,31 +88,58 @@ function downloadSpec(github:Client githubClient, string owner, string repo,
     // Get content
     string|byte[]|error content = response.getTextPayload();
     
+    if content is error {
+        return error("Failed to get content from response");
+    }
+    
+    string textContent;
+    if content is string {
+        textContent = content;
+    } else {
+        // Convert bytes to string
+        textContent = check string:fromBytes(content);
+    }
+    
     // Create directory if it doesn't exist
     string dirPath = check file:parentPath(localPath);
     if !check file:test(dirPath, file:EXISTS) {
         check file:createDir(dirPath, file:RECURSIVE);
     }
     
-    // Write to file
-    if content is string {
-        check io:fileWriteString(localPath, content);
-    } else if content is byte[] {
-        check io:fileWriteBytes(localPath, content);
-    } else {
-        return error("Failed to get content from response");
-    }
+    // Write as openapi.yaml (always YAML format)
+    check io:fileWriteString(localPath, textContent);
     
     io:println(string `  ✅ Downloaded to ${localPath}`);
     return;
 }
 
-// Execute git command
-function executeGitCommand(string command) returns error? {
-    // In GitHub Actions, we'll use os:exec or system commands
-    // For now, this is a placeholder - GitHub Actions will handle git commands
-    io:println(string `  Executing: ${command}`);
+// Create metadata.json file
+function createMetadataFile(Repository repo, string version, string dirPath) returns error? {
+    json metadata = {
+        "name": repo.name,
+        "baseUrl": repo.baseUrl,
+        "documentationUrl": repo.documentationUrl,
+        "description": repo.description,
+        "tags": repo.tags,
+        "version": version
+    };
+    
+    string metadataPath = string `${dirPath}/.metadata.json`;
+    check io:fileWriteJson(metadataPath, metadata);
+    io:println(string `  ✅ Created metadata at ${metadataPath}`);
     return;
+}
+
+// Get current repository info from git
+function getCurrentRepo() returns [string, string]|error {
+    string? githubRepo = os:getEnv("GITHUB_REPOSITORY");
+    if githubRepo is string {
+        string[] parts = regexp:split(re `/`, githubRepo);
+        if parts.length() == 2 {
+            return [parts[0], parts[1]];
+        }
+    }
+    return error("Could not determine repository from GITHUB_REPOSITORY env var");
 }
 
 // Create Pull Request
@@ -106,7 +149,6 @@ function createPullRequest(github:Client githubClient, string owner, string repo
     
     io:println("\n🔗 Creating Pull Request...");
     
-    // Create PR using GitHub client
     github:PullRequest pr = check githubClient->/repos/[owner]/[repo]/pulls.post({
         title: title,
         body: body,
@@ -126,19 +168,6 @@ function createPullRequest(github:Client githubClient, string owner, string repo
     io:println("🏷️  Added labels to PR");
     
     return prUrl;
-}
-
-// Get current repository info from git
-function getCurrentRepo() returns [string, string]|error {
-    // This will be provided via environment variables in GitHub Actions
-    string? githubRepo = os:getEnv("GITHUB_REPOSITORY");
-    if githubRepo is string {
-        string[] parts = regexp:split(re `/`, githubRepo);
-        if parts.length() == 2 {
-            return [parts[0], parts[1]];
-        }
-    }
-    return error("Could not determine repository from GITHUB_REPOSITORY env var");
 }
 
 // Main monitoring function
@@ -171,7 +200,7 @@ public function main() returns error? {
         }
     });
     
-    // Load repositories from repos.json (one level up from dependabot/)
+    // Load repositories from repos.json
     json reposJson = check io:fileReadJson("../repos.json");
     Repository[] repos = check reposJson.cloneWithType();
     
@@ -182,7 +211,7 @@ public function main() returns error? {
     
     // Check each repository
     foreach Repository repo in repos {
-        io:println(string `Checking: ${repo.name} (${repo.owner}/${repo.repo})`);
+        io:println(string `Checking: ${repo.name} (${repo.vendor}/${repo.api})`);
         
         // Get latest release
         github:Release|error latestRelease = githubClient->/repos/[repo.owner]/[repo.repo]/releases/latest();
@@ -204,9 +233,12 @@ public function main() returns error? {
                 if hasVersionChanged(repo.lastVersion, tagName) {
                     io:println(string `  ✅ UPDATE AVAILABLE!`);
                     
-                    // Define local path for the spec in the openapi folder (relative to api-specs root)
-                    // Pattern: openapi/{owner}/{repo}/{version}/{specfile}
-                    string localPath = string `../openapi/${repo.owner}/${repo.repo}/${tagName}/${repo.releaseAssetName}`;
+                    // Clean version string (remove 'v' prefix if exists)
+                    string cleanVersion = tagName.startsWith("v") ? tagName.substring(1) : tagName;
+                    
+                    // Structure: openapi/{vendor}/{api}/{version}/
+                    string versionDir = string `../openapi/${repo.vendor}/${repo.api}/${cleanVersion}`;
+                    string localPath = string `${versionDir}/openapi.yaml`;
                     
                     // Download the spec
                     error? downloadResult = downloadSpec(
@@ -222,6 +254,13 @@ public function main() returns error? {
                     if downloadResult is error {
                         io:println(string `  ❌ Download failed: ${downloadResult.message()}`);
                     } else {
+                        // Create metadata.json
+                        error? metadataResult = createMetadataFile(repo, cleanVersion, versionDir);
+                        
+                        if metadataResult is error {
+                            io:println(string `  ⚠️  Metadata creation failed: ${metadataResult.message()}`);
+                        }
+                        
                         // Track the update
                         updates.push({
                             repo: repo,
@@ -259,55 +298,60 @@ public function main() returns error? {
         // Create update summary
         string[] updateSummary = [];
         foreach UpdateResult update in updates {
-            string summary = string `- ${update.repo.name}: ${update.oldVersion} → ${update.newVersion}`;
+            string summary = "- " + update.repo.vendor + "/" + update.repo.api + ": " + update.oldVersion + " → " + update.newVersion;
             io:println(summary);
             updateSummary.push(summary);
         }
-        
-        // Update repos.json (one level up)
+
+        // Update repos.json
         check io:fileWriteJson("../repos.json", repos.toJson());
         io:println("\n✅ Updated repos.json with new versions");
-        
+
         // Write update summary
-        string summaryContent = string:'join("\n", ...updateSummary);
+        string summaryContent = "";
+        foreach string s in updateSummary {
+            summaryContent = summaryContent + s + "\n";
+        }
         check io:fileWriteString("../UPDATE_SUMMARY.txt", summaryContent);
-        
+
         // Get current date for branch name
         time:Utc currentTime = time:utcNow();
-        string timestamp = string `${time:utcToString(currentTime).substring(0, 10)}-${currentTime[0]}`;
-        string branchName = string `openapi-update-${timestamp}`;
-        
+        time:Civil civil = time:utcToCivil(currentTime);
+        string timestamp = civil.year.toString() + "-" + civil.month.toString() + "-" + civil.day.toString() + "-" + civil.hour.toString() + civil.minute.toString() + civil.second.toString();
+        string branchName = "openapi-update-" + timestamp;
+
         // Get repository info
         [string, string]|error repoInfo = getCurrentRepo();
         if repoInfo is error {
             io:println("⚠️  Could not create PR automatically. Changes are ready in working directory.");
             io:println("Please create a PR manually with the following branch name:");
-            io:println(string `  ${branchName}`);
+            io:println("  " + branchName);
             return;
         }
-        
+
         string owner = repoInfo[0];
         string repoName = repoInfo[1];
-        
+
         // Create PR title and body
-        time:Civil civil = time:utcToCivil(currentTime);
-        string prTitle = string `Update OpenAPI Specifications - ${civil.year}-${civil.month}-${civil.day}`;
-        
-        string prBody = string `## OpenAPI Specification Updates
+        string prTitle = "Update OpenAPI Specifications - " + civil.year.toString() + "-" + civil.month.toString() + "-" + civil.day.toString();
 
-This PR contains automated updates to OpenAPI specifications detected by the Dependabot monitor.
+        // Build Files Changed section
+        string filesChangedContent = "";
+        foreach UpdateResult u in updates {
+            filesChangedContent = filesChangedContent + "- `" + u.localPath + "`\n";
+        }
 
-### Changes:
-${summaryContent}
-
-### Checklist:
-- [ ] Review specification changes
-- [ ] Verify connector generation works
-- [ ] Run tests
-- [ ] Update documentation if needed
-
----
-🤖 This PR was automatically generated by the OpenAPI Dependabot`;
+        string prBody = "## OpenAPI Specification Updates\n\n" +
+            "This PR contains automated updates to OpenAPI specifications detected by the Dependabot monitor.\n\n" +
+            "### Changes:\n" + summaryContent + "\n" +
+            "### Files Changed:\n" + filesChangedContent + "\n" +
+            "### Checklist:\n" +
+            "- [ ] Review specification changes\n" +
+            "- [ ] Verify connector generation works\n" +
+            "- [ ] Run tests\n" +
+            "- [ ] Update documentation if needed\n\n" +
+            "---\n" +
+            "🤖 This PR was automatically generated by the OpenAPI Dependabot";
         
         // Create the PR
         string|error prUrl = createPullRequest(

@@ -1,4 +1,4 @@
-name: Auto Review & Merge (Reviewer Bot)
+name: Auto Review & Merge
 
 on:
   pull_request:
@@ -7,12 +7,47 @@ on:
 jobs:
   review-and-merge:
     runs-on: ubuntu-latest
-
-    # Prevent infinite loops
-    if: github.actor == 'TharaniDJ'
+    
+    # Only run on PRs created by the OpenAPI Dependabot workflow
+    if: |
+      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      contains(github.event.pull_request.labels.*.name, 'openapi-update')
 
     steps:
-      - name: Approve PR as reviewer bot
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      
+      - name: Validate PR structure
+        id: validate
+        run: |
+          echo "🔍 Validating PR changes..."
+          
+          # Check if only expected files are changed
+          CHANGED_FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path')
+          
+          VALID=true
+          for file in $CHANGED_FILES; do
+            # Allow changes to openapi/, repos.json, and UPDATE_SUMMARY.txt
+            if [[ ! "$file" =~ ^openapi/ ]] && [[ "$file" != "repos.json" ]] && [[ "$file" != "UPDATE_SUMMARY.txt" ]]; then
+              echo "❌ Unexpected file change: $file"
+              VALID=false
+            fi
+          done
+          
+          if [ "$VALID" = true ]; then
+            echo "✅ All file changes are valid"
+            echo "valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Invalid file changes detected"
+            echo "valid=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Approve PR
+        if: steps.validate.outputs.valid == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.REVIEWER_BOT_TOKEN }}
@@ -22,17 +57,51 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
               event: "APPROVE",
-              body: "Auto-approved by reviewer bot"
+              body: "✅ Auto-approved: All OpenAPI specification updates validated\n\n- File structure verified\n- Only expected files modified\n- Ready to merge"
             });
-
-      - name: Merge PR as reviewer bot
+            
+            console.log("✅ PR approved successfully");
+      
+      - name: Merge PR
+        if: steps.validate.outputs.valid == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.REVIEWER_BOT_TOKEN }}
           script: |
-            await github.rest.pulls.merge({
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                merge_method: "squash",
+                commit_title: `${context.payload.pull_request.title} (#${context.payload.pull_request.number})`,
+                commit_message: "Automated merge of OpenAPI specification updates"
+              });
+              
+              console.log("✅ PR merged successfully");
+            } catch (error) {
+              console.error("❌ Failed to merge PR:", error);
+              
+              // Comment on PR about merge failure
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: "⚠️ Auto-merge failed. Please review and merge manually.\n\nError: " + error.message
+              });
+              
+              throw error;
+            }
+      
+      - name: Comment on validation failure
+        if: steps.validate.outputs.valid == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              merge_method: "squash"
+              issue_number: context.payload.pull_request.number,
+              body: "⚠️ Auto-merge skipped: Unexpected file changes detected.\n\nPlease review the changes manually before merging."
             });

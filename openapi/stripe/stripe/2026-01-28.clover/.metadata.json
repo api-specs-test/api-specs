@@ -1,0 +1,1 @@
+{"name":"Stripe API", "baseUrl":"https://api.stripe.com", "documentationUrl":"https://stripe.com/docs/api", "description":"Stripe payment processing API", "tags":["payments", "billing"]}

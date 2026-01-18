@@ -157,8 +157,7 @@ function createMetadataFile(Repository repo, string version, string dirPath) ret
         "baseUrl": repo.baseUrl,
         "documentationUrl": repo.documentationUrl,
         "description": repo.description,
-        "tags": repo.tags,
-        "version": version
+        "tags": repo.tags
     };
     
     string metadataPath = string `${dirPath}/.metadata.json`;

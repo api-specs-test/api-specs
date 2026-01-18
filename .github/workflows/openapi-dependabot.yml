@@ -62,7 +62,15 @@ jobs:
           git push -u origin "$BRANCH_NAME"
           echo "✅ Branch pushed successfully"
           echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
-
+      - name: Ensure Labels Exist
+        if: steps.check_updates.outputs.updates_found == 'true' && env.BRANCH_NAME != ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Create labels if they don't exist
+          gh label create "openapi-update" --description "OpenAPI specification updates" --color "0366d6" --force
+          gh label create "automated" --description "Automated changes" --color "bfd4f2" --force
+          gh label create "dependencies" --description "Dependency updates" --color "0366d6" --force
       - name: Create Pull Request
         if: steps.check_updates.outputs.updates_found == 'true' && env.BRANCH_NAME != ''
         env:

@@ -27,7 +27,6 @@ type Repository record {|
     string[] tags;
     string versioningStrategy = RELEASE_TAG; // Default to release-tag
     string? branch = (); // For file-based strategies
-    string? lastHash = (); // For tracking file changes
 |};
 
 // Update result record
@@ -45,14 +44,6 @@ function hasVersionChanged(string oldVersion, string newVersion) returns boolean
     return oldVersion != newVersion;
 }
 
-// Check if file content has changed based on hash
-function hasFileChanged(string? oldHash, string newHash) returns boolean {
-    if oldHash is () {
-        return true; // First time tracking this file
-    }
-    return oldHash != newHash;
-}
-
 // Calculate SHA-256 hash of content
 function calculateHash(string content) returns string {
     byte[] contentBytes = content.toBytes();
@@ -60,11 +51,8 @@ function calculateHash(string content) returns string {
     return hashBytes.toBase16();
 }
 
-// Extract version from OpenAPI spec content
+// Extract version from OpenAPI spec content (works for both YAML and JSON)
 function extractApiVersion(string content) returns string|error {
-    // Try to find "version:" under "info:" section
-    // This is a simple regex-based extraction
-    
     // Split content by lines
     string[] lines = regexp:split(re `\n`, content);
     boolean inInfoSection = false;
@@ -72,26 +60,37 @@ function extractApiVersion(string content) returns string|error {
     foreach string line in lines {
         string trimmedLine = line.trim();
         
-        // Check if we're entering info section
+        // Check for JSON format: "version": "value"
+        if trimmedLine.startsWith("\"version\":") || trimmedLine.startsWith("'version':") {
+            string[] parts = regexp:split(re `:`, trimmedLine);
+            if parts.length() >= 2 {
+                string versionValue = parts[1].trim();
+                // Remove quotes, commas, and whitespace
+                versionValue = removeQuotes(versionValue);
+                versionValue = regexp:replace(re `,`, versionValue, "").trim();
+                if versionValue.length() > 0 {
+                    return versionValue;
+                }
+            }
+        }
+        
+        // Check for YAML format
         if trimmedLine == "info:" {
             inInfoSection = true;
             continue;
         }
         
-        // If we're in info section, look for version
         if inInfoSection {
             // Exit info section if we hit another top-level key
             if !line.startsWith(" ") && !line.startsWith("\t") && trimmedLine != "" && !trimmedLine.startsWith("#") {
                 break;
             }
             
-            // Look for version field
+            // Look for version field in YAML
             if trimmedLine.startsWith("version:") {
-                // Extract version value
                 string[] parts = regexp:split(re `:`, trimmedLine);
                 if parts.length() >= 2 {
                     string versionValue = parts[1].trim();
-                    // Remove quotes if present
                     versionValue = removeQuotes(versionValue);
                     return versionValue;
                 }
@@ -345,12 +344,13 @@ function processReleaseTagRepo(github:Client githubClient, Repository repo) retu
             }
             
             // Update the repo record
+            string oldVersion = repo.lastVersion;
             repo.lastVersion = tagName;
             
             // Return the update result
             return {
                 repo: repo,
-                oldVersion: repo.lastVersion,
+                oldVersion: oldVersion,
                 newVersion: tagName,
                 apiVersion: apiVersion,
                 downloadUrl: "https://github.com/" + repo.owner + "/" + repo.repo + "/releases/tag/" + tagName,
@@ -379,6 +379,7 @@ function processFileBasedRepo(Repository repo) returns UpdateResult|error? {
     
     string branch = repo.branch is string ? <string>repo.branch : "master";
     io:println(string `  Branch: ${branch}`);
+    io:println(string `  Current tracked version: ${repo.lastVersion}`);
     
     // Download the spec from branch
     string|error specContent = downloadSpecFromBranch(
@@ -393,41 +394,33 @@ function processFileBasedRepo(Repository repo) returns UpdateResult|error? {
         return error(specContent.message());
     }
     
-    // Calculate hash of content
-    string newHash = calculateHash(specContent);
-    io:println(string `  📊 Content hash: ${newHash.substring(0, 12)}...`);
+    // Extract API version from spec content
+    string|error apiVersionResult = extractApiVersion(specContent);
     
-    // Check if file has changed
-    if hasFileChanged(repo.lastHash, newHash) {
-        io:println("  ✅ UPDATE DETECTED! (File content changed)");
-        
-        // Extract API version from spec
-        string apiVersion = "";
-        var apiVersionResult = extractApiVersion(specContent);
-        if apiVersionResult is error {
-            io:println("  ⚠️  Could not extract API version from spec content");
-            // Try to extract from filename (e.g., "v2.1" from "admin.rest.swagger-v2.1.json")
-            string[] pathParts = regexp:split(re `/`, repo.specPath);
-            string filename = pathParts[pathParts.length() - 1];
-            string[] filenameParts = regexp:split(re `-v`, filename);
-            if filenameParts.length() >= 2 {
-                string versionPart = filenameParts[filenameParts.length() - 1];
-                // Remove file extension (.json)
-                string[] versionWithExt = regexp:split(re `\.json`, versionPart);
-                apiVersion = versionWithExt[0];
-                io:println(string `  📌 Extracted version from filename: ${apiVersion}`);
-            } else {
-                apiVersion = "latest";
-                io:println("  📌 Using version: latest");
-            }
-        } else {
-            apiVersion = apiVersionResult;
-            io:println("  📌 API Version: " + apiVersion);
-        }
+    if apiVersionResult is error {
+        io:println("  ❌ Could not extract API version from spec content");
+        io:println("  ⚠️  Skipping this repository - please check the spec format");
+        return error("Cannot extract version from spec");
+    }
+    
+    string apiVersion = apiVersionResult;
+    io:println(string `  📌 Current API Version in spec: ${apiVersion}`);
+    
+    // Check if version has changed
+    if hasVersionChanged(repo.lastVersion, apiVersion) {
+        io:println(string `  ✅ UPDATE DETECTED! (${repo.lastVersion} → ${apiVersion})`);
         
         // Structure: openapi/{vendor}/{api}/{apiVersion}/
         string versionDir = "../openapi/" + repo.vendor + "/" + repo.api + "/" + apiVersion;
         string localPath = versionDir + "/openapi.yaml";
+        
+        // Check if this version already exists
+        boolean dirExists = check file:test(versionDir, file:EXISTS);
+        if dirExists {
+            io:println(string `  ⚠️  Version directory already exists: ${versionDir}`);
+            io:println("  ℹ️  Skipping duplicate download");
+            return ();
+        }
         
         // Save the spec
         error? saveResult = saveSpec(specContent, localPath);
@@ -443,24 +436,20 @@ function processFileBasedRepo(Repository repo) returns UpdateResult|error? {
         }
         
         // Update the repo record
-        string oldHash = repo.lastHash is string ? <string>repo.lastHash : "initial";
-        repo.lastHash = newHash;
-        
-        // Create version strings for display
-        string oldVersionDisplay = oldHash == "initial" ? "initial" : oldHash.substring(0, 8);
-        string newVersionDisplay = newHash.substring(0, 8);
+        string oldVersion = repo.lastVersion;
+        repo.lastVersion = apiVersion;
         
         // Return the update result
         return {
             repo: repo,
-            oldVersion: oldVersionDisplay,
-            newVersion: newVersionDisplay,
+            oldVersion: oldVersion,
+            newVersion: apiVersion,
             apiVersion: apiVersion,
             downloadUrl: string `https://github.com/${repo.owner}/${repo.repo}/blob/${branch}/${repo.specPath}`,
             localPath: localPath
         };
     } else {
-        io:println(string `  ℹ️  No updates (hash unchanged)`);
+        io:println(string `  ℹ️  No updates (version unchanged: ${apiVersion})`);
         return ();
     }
 }

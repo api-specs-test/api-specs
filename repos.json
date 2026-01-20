@@ -112,7 +112,7 @@
     },
     {
         "vendor": "hubspot",
-        "api": "automation-actions",
+        "api": "automation.actions",
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
         "name": "HubSpot Automation Actions API",
@@ -131,7 +131,7 @@
     },
     {
         "vendor": "hubspot",
-        "api": "crm-associations",
+        "api": "crm.associations",
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
         "name": "HubSpot CRM Associations API",
@@ -150,7 +150,7 @@
     },
     {
         "vendor": "hubspot",
-        "api": "crm-associations-schema",
+        "api": "crm.associationsSchema",
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
         "name": "HubSpot CRM Associations Schema API",
@@ -170,7 +170,7 @@
     },
     {
         "vendor": "hubspot",
-        "api": "crm-carts",
+        "api": "crm.carts",
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
         "name": "HubSpot CRM Carts API",
@@ -190,7 +190,7 @@
     },
     {
         "vendor": "hubspot",
-        "api": "crm-discounts",
+        "api": "crm.discounts",
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
         "name": "HubSpot CRM Discounts API",

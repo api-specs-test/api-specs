@@ -12,7 +12,7 @@ jobs:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           gh api \
-            repos/ballerina-library-test/ballerina-library/dispatches \
+            repos/ballerina-library-test/module-ballerinax-docusign.dsadmin/dispatches \
             -X POST \
             -f event_type=trigger-from-api-specs-test \
             -f client_payload[sender]=api-specs-test/api-specs

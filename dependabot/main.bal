@@ -28,6 +28,7 @@ type Repository record {|
     string[] tags;
     string versioningStrategy = RELEASE_TAG; // Default to release-tag
     string? branch = (); // For file-based and rollout-based strategies
+    string? connectorRepo = (); // Optional: connector repository reference
 |};
 
 // Update result record

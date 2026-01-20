@@ -13,9 +13,9 @@ jobs:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           gh api \
-            repos/ballerina-library-test/module-ballerinax-docusign.dsadmin/dispatches \
+            repos/ballerina-library-test/module-ballerinax-openai/dispatches \
             -X POST \
             -f event_type=openapi-update \
             -f client_payload[sender]=api-specs-test/api-specs \
-            -f client_payload[openapi_url]=https://raw.githubusercontent.com/docusign/OpenAPI-Specifications/master/admin.rest.swagger-v2.1.json \
-            -f client_payload[spec_version]=v2.1
+            -f client_payload[openapi_url]=https://github.com/api-specs-test/api-specs/blob/openapi-update-20260118-051057/openapi/twilio/twilio/2.6.1/openapi.yaml
+            

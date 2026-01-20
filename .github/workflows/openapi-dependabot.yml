@@ -90,7 +90,7 @@ jobs:
       - name: Trigger Connector Regeneration
         if: steps.check_updates.outputs.updates_found == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           echo "🚀 Triggering connector regeneration..."
           
@@ -108,7 +108,6 @@ jobs:
               SPEC_PATH=$(echo "$line" | sed 's/^- \(.*\):.*/\1/' | xargs)
               VENDOR=$(echo "$SPEC_PATH" | cut -d'/' -f1)
               API=$(echo "$SPEC_PATH" | cut -d'/' -f2)
-              API=$(echo "$SPEC_PATH" | cut -d'/' -f2)
               
               # Find connector repo from repos.json
               CONNECTOR_REPO=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .connectorRepo" repos.json)
@@ -120,13 +119,15 @@ jobs:
                 VERSION=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .lastVersion" repos.json)
                 SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/${VENDOR}/${API}/${VERSION}/openapi.yaml"
                 
-                # Trigger repository_dispatch event
-                gh api repos/"$CONNECTOR_REPO"/dispatches \
+                # Trigger repository_dispatch event using gh CLI
+                gh api \
+                  repos/"$CONNECTOR_REPO"/dispatches \
+                  -X POST \
                   -f event_type=openapi-update \
-                  -f "client_payload[openapi_url]=$SPEC_URL" \
-                  -f "client_payload[spec_version]=$VERSION" \
-                  -f "client_payload[vendor]=$VENDOR" \
-                  -f "client_payload[api]=$API"
+                  -f client_payload[openapi_url]="$SPEC_URL" \
+                  -f client_payload[spec_version]="$VERSION" \
+                  -f client_payload[vendor]="$VENDOR" \
+                  -f client_payload[api]="$API"
                 
                 echo "✅ Triggered for $CONNECTOR_REPO"
               else

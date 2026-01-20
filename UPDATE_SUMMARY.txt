@@ -1,1 +1,5 @@
-- stripe/stripe: v2024-06-20 → v2152 (API v2026-01-28.clover)
+- stripe/stripe: v2153 → v2153 (API v2026-01-28.clover)
+- twilio/twilio: 2.6.1 → 2.6.1 (API v2.6.1)
+- docusign/admin: initial → 30678850 (API v2.1)
+- docusign/click: initial → 28f99d2e (API v2)
+- docusign/esignature: initial → 4effde9f (API v2.1)

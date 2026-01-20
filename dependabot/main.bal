@@ -412,7 +412,8 @@ function processFileBasedRepo(Repository repo) returns UpdateResult|error? {
             string[] filenameParts = regexp:split(re `-v`, filename);
             if filenameParts.length() >= 2 {
                 string versionPart = filenameParts[filenameParts.length() - 1];
-                string[] versionWithExt = regexp:split(re `\.`, versionPart);
+                // Remove file extension (.json)
+                string[] versionWithExt = regexp:split(re `\.json`, versionPart);
                 apiVersion = versionWithExt[0];
                 io:println(string `  📌 Extracted version from filename: ${apiVersion}`);
             } else {
@@ -442,14 +443,18 @@ function processFileBasedRepo(Repository repo) returns UpdateResult|error? {
         }
         
         // Update the repo record
-        string oldHash = repo.lastHash is string ? <string>repo.lastHash : "none";
+        string oldHash = repo.lastHash is string ? <string>repo.lastHash : "initial";
         repo.lastHash = newHash;
+        
+        // Create version strings for display
+        string oldVersionDisplay = oldHash == "initial" ? "initial" : oldHash.substring(0, 8);
+        string newVersionDisplay = newHash.substring(0, 8);
         
         // Return the update result
         return {
             repo: repo,
-            oldVersion: oldHash.substring(0, 8),
-            newVersion: newHash.substring(0, 8),
+            oldVersion: oldVersionDisplay,
+            newVersion: newVersionDisplay,
             apiVersion: apiVersion,
             downloadUrl: string `https://github.com/${repo.owner}/${repo.repo}/blob/${branch}/${repo.specPath}`,
             localPath: localPath

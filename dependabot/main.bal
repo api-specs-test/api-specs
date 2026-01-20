@@ -10,6 +10,7 @@ import ballerinax/github;
 // Versioning strategy types
 const RELEASE_TAG = "release-tag";
 const FILE_BASED = "file-based";
+const ROLLOUT_BASED = "rollout-based";
 
 // Repository record type
 type Repository record {|
@@ -26,7 +27,7 @@ type Repository record {|
     string description;
     string[] tags;
     string versioningStrategy = RELEASE_TAG; // Default to release-tag
-    string? branch = (); // For file-based strategies
+    string? branch = (); // For file-based and rollout-based strategies
 |};
 
 // Update result record
@@ -49,6 +50,72 @@ function calculateHash(string content) returns string {
     byte[] contentBytes = content.toBytes();
     byte[] hashBytes = crypto:hashSha256(contentBytes);
     return hashBytes.toBase16();
+}
+
+// Extract rollout number from path (e.g., "Rollouts/148901/v4" -> "148901")
+function extractRolloutNumber(string path) returns string|error {
+    string[] parts = regexp:split(re `/`, path);
+    foreach int i in 0 ..< parts.length() {
+        if parts[i] == "Rollouts" && i + 1 < parts.length() {
+            return parts[i + 1];
+        }
+    }
+    return error("Could not extract rollout number from path");
+}
+
+// List directory contents from GitHub
+function listGitHubDirectory(string owner, string repo, string branch, string path) returns string[]|error {
+    string url = string `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+    
+    http:Client httpClient = check new (url);
+    http:Response response = check httpClient->get("");
+    
+    if response.statusCode != 200 {
+        return error(string `Failed to list directory: HTTP ${response.statusCode}`);
+    }
+    
+    json|error content = response.getJsonPayload();
+    if content is error {
+        return error("Failed to parse directory listing");
+    }
+    
+    if content is json[] {
+        string[] names = [];
+        foreach json item in content {
+            if item is map<json> {
+                json? nameJson = item["name"];
+                if nameJson is string {
+                    names.push(nameJson);
+                }
+            }
+        }
+        return names;
+    }
+    
+    return error("Unexpected response format from GitHub API");
+}
+
+// Find latest rollout number in a directory
+function findLatestRollout(string owner, string repo, string branch, string basePath) returns string|error {
+    io:println(string `  🔍 Searching for rollouts in ${basePath}...`);
+    
+    string[] contents = check listGitHubDirectory(owner, repo, branch, basePath);
+    
+    int maxRollout = 0;
+    foreach string item in contents {
+        // Try to parse as integer
+        int|error rolloutNum = int:fromString(item);
+        if rolloutNum is int && rolloutNum > maxRollout {
+            maxRollout = rolloutNum;
+        }
+    }
+    
+    if maxRollout == 0 {
+        return error("No rollout directories found");
+    }
+    
+    io:println(string `  ✅ Found latest rollout: ${maxRollout}`);
+    return maxRollout.toString();
 }
 
 // Extract version from OpenAPI spec content (works for both YAML and JSON)
@@ -454,6 +521,113 @@ function processFileBasedRepo(Repository repo) returns UpdateResult|error? {
     }
 }
 
+// Process repository with rollout-based versioning strategy (for HubSpot)
+function processRolloutBasedRepo(Repository repo) returns UpdateResult|error? {
+    io:println(string `Checking: ${repo.name} (${repo.vendor}/${repo.api}) [Rollout-Based Strategy]`);
+    
+    string branch = repo.branch is string ? <string>repo.branch : "main";
+    io:println(string `  Branch: ${branch}`);
+    io:println(string `  Current tracked rollout: ${repo.lastVersion}`);
+    
+    // Extract the base path to the Rollouts directory
+    string[] pathParts = regexp:split(re `/Rollouts/`, repo.specPath);
+    if pathParts.length() < 2 {
+        io:println("  ❌ Invalid path format - cannot find Rollouts directory");
+        return error("Invalid rollout path format");
+    }
+    
+    string basePath = pathParts[0] + "/Rollouts";
+    
+    // Find the latest rollout number
+    string|error latestRollout = findLatestRollout(repo.owner, repo.repo, branch, basePath);
+    
+    if latestRollout is error {
+        io:println("  ❌ Failed to find rollouts: " + latestRollout.message());
+        return error(latestRollout.message());
+    }
+    
+    io:println(string `  📌 Latest rollout: ${latestRollout}`);
+    
+    // Check if rollout has changed
+    if hasVersionChanged(repo.lastVersion, latestRollout) {
+        io:println(string `  ✅ UPDATE DETECTED! (Rollout ${repo.lastVersion} → ${latestRollout})`);
+        
+        // Construct the new spec path with the latest rollout
+        string[] afterRollouts = regexp:split(re `/Rollouts/[0-9]+/`, repo.specPath);
+        string afterRolloutPath = afterRollouts.length() > 1 ? afterRollouts[1] : "";
+        string newSpecPath = basePath + "/" + latestRollout + "/" + afterRolloutPath;
+        
+        io:println(string `  📍 New spec path: ${newSpecPath}`);
+        
+        // Download the spec
+        string|error specContent = downloadSpecFromBranch(
+            repo.owner,
+            repo.repo,
+            branch,
+            newSpecPath
+        );
+        
+        if specContent is error {
+            io:println("  ❌ Download failed: " + specContent.message());
+            return error(specContent.message());
+        }
+        
+        // Extract API version from spec
+        string apiVersion = "";
+        var apiVersionResult = extractApiVersion(specContent);
+        if apiVersionResult is error {
+            io:println("  ⚠️  Could not extract API version from spec, using rollout number");
+            apiVersion = latestRollout;
+        } else {
+            apiVersion = apiVersionResult;
+            io:println(string `  📌 API Version: ${apiVersion}`);
+        }
+        
+        // Structure: openapi/{vendor}/{api}/rollout-{rolloutNumber}/
+        string versionDir = "../openapi/" + repo.vendor + "/" + repo.api + "/rollout-" + latestRollout;
+        string localPath = versionDir + "/openapi.yaml";
+        
+        // Check if this rollout already exists
+        boolean dirExists = check file:test(versionDir, file:EXISTS);
+        if dirExists {
+            io:println(string `  ⚠️  Rollout directory already exists: ${versionDir}`);
+            io:println("  ℹ️  Skipping duplicate download");
+            return ();
+        }
+        
+        // Save the spec
+        error? saveResult = saveSpec(specContent, localPath);
+        if saveResult is error {
+            io:println("  ❌ Save failed: " + saveResult.message());
+            return error(saveResult.message());
+        }
+        
+        // Create metadata.json
+        error? metadataResult = createMetadataFile(repo, latestRollout, versionDir);
+        if metadataResult is error {
+            io:println("  ⚠️  Metadata creation failed: " + metadataResult.message());
+        }
+        
+        // Update the repo record with new rollout and path
+        string oldVersion = repo.lastVersion;
+        repo.lastVersion = latestRollout;
+        repo.specPath = newSpecPath;
+        
+        // Return the update result
+        return {
+            repo: repo,
+            oldVersion: "rollout-" + oldVersion,
+            newVersion: "rollout-" + latestRollout,
+            apiVersion: "rollout-" + latestRollout,
+            downloadUrl: string `https://github.com/${repo.owner}/${repo.repo}/blob/${branch}/${newSpecPath}`,
+            localPath: localPath
+        };
+    } else {
+        io:println(string `  ℹ️  No updates (rollout unchanged: ${latestRollout})`);
+        return ();
+    }
+}
+
 // Main monitoring function
 public function main() returns error? {
     io:println("=== Dependabot OpenAPI Monitor ===");
@@ -501,6 +675,8 @@ public function main() returns error? {
             result = processReleaseTagRepo(githubClient, repo);
         } else if repo.versioningStrategy == FILE_BASED {
             result = processFileBasedRepo(repo);
+        } else if repo.versioningStrategy == ROLLOUT_BASED {
+            result = processRolloutBasedRepo(repo);
         } else {
             io:println(string `⚠️  Unknown versioning strategy: ${repo.versioningStrategy}`);
         }

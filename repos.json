@@ -23,7 +23,7 @@
         "owner": "twilio",
         "repo": "twilio-oai",
         "name": "Twilio API",
-        "lastVersion": "1.51.0",
+        "lastVersion": "2.6.1",
         "specPath": "spec/json/twilio_api_v2010.json",
         "releaseAssetName": "twilio_api_v2010.json",
         "baseUrl": "https://api.twilio.com",
@@ -41,7 +41,7 @@
         "owner": "openai",
         "repo": "openai-openapi",
         "name": "OpenAI API",
-        "lastVersion": "1.0.0",
+        "lastVersion": "2.0.0",
         "specPath": "openapi.yaml",
         "releaseAssetName": "openapi.yaml",
         "baseUrl": "https://api.openai.com",
@@ -109,5 +109,103 @@
         ],
         "versioningStrategy": "file-based",
         "branch": "master"
+    },
+    {
+        "vendor": "hubspot",
+        "api": "automation-actions",
+        "owner": "HubSpot",
+        "repo": "HubSpot-public-api-spec-collection",
+        "name": "HubSpot Automation Actions API",
+        "lastVersion": "148901",
+        "specPath": "PublicApiSpecs/Automation/Actions V4/Rollouts/148901/v4/actions.json",
+        "releaseAssetName": "actions.json",
+        "baseUrl": "https://api.hubapi.com",
+        "documentationUrl": "https://developers.hubspot.com/docs/api/automation/custom-workflow-actions",
+        "description": "HubSpot Automation Actions API",
+        "tags": [
+            "automation",
+            "workflow"
+        ],
+        "versioningStrategy": "rollout-based",
+        "branch": "main"
+    },
+    {
+        "vendor": "hubspot",
+        "api": "crm-associations",
+        "owner": "HubSpot",
+        "repo": "HubSpot-public-api-spec-collection",
+        "name": "HubSpot CRM Associations API",
+        "lastVersion": "50914",
+        "specPath": "PublicApiSpecs/CRM/Associations/Rollouts/50914/v4/associations.json",
+        "releaseAssetName": "associations.json",
+        "baseUrl": "https://api.hubapi.com",
+        "documentationUrl": "https://developers.hubspot.com/docs/api/crm/associations",
+        "description": "HubSpot CRM Associations API",
+        "tags": [
+            "crm",
+            "associations"
+        ],
+        "versioningStrategy": "rollout-based",
+        "branch": "main"
+    },
+    {
+        "vendor": "hubspot",
+        "api": "crm-associations-schema",
+        "owner": "HubSpot",
+        "repo": "HubSpot-public-api-spec-collection",
+        "name": "HubSpot CRM Associations Schema API",
+        "lastVersion": "50914",
+        "specPath": "PublicApiSpecs/CRM/Associations Schema/Rollouts/50914/v4/associationsSchema.json",
+        "releaseAssetName": "associationsSchema.json",
+        "baseUrl": "https://api.hubapi.com",
+        "documentationUrl": "https://developers.hubspot.com/docs/api/crm/associations",
+        "description": "HubSpot CRM Associations Schema API",
+        "tags": [
+            "crm",
+            "associations",
+            "schema"
+        ],
+        "versioningStrategy": "rollout-based",
+        "branch": "main"
+    },
+    {
+        "vendor": "hubspot",
+        "api": "crm-carts",
+        "owner": "HubSpot",
+        "repo": "HubSpot-public-api-spec-collection",
+        "name": "HubSpot CRM Carts API",
+        "lastVersion": "424",
+        "specPath": "PublicApiSpecs/CRM/Carts/Rollouts/424/v3/carts.json",
+        "releaseAssetName": "carts.json",
+        "baseUrl": "https://api.hubapi.com",
+        "documentationUrl": "https://developers.hubspot.com/docs/api/crm/carts",
+        "description": "HubSpot CRM Carts API",
+        "tags": [
+            "crm",
+            "ecommerce",
+            "carts"
+        ],
+        "versioningStrategy": "rollout-based",
+        "branch": "main"
+    },
+    {
+        "vendor": "hubspot",
+        "api": "crm-discounts",
+        "owner": "HubSpot",
+        "repo": "HubSpot-public-api-spec-collection",
+        "name": "HubSpot CRM Discounts API",
+        "lastVersion": "424",
+        "specPath": "PublicApiSpecs/CRM/Discounts/Rollouts/424/v3/discounts.json",
+        "releaseAssetName": "discounts.json",
+        "baseUrl": "https://api.hubapi.com",
+        "documentationUrl": "https://developers.hubspot.com/docs/api/crm/discounts",
+        "description": "HubSpot CRM Discounts API",
+        "tags": [
+            "crm",
+            "ecommerce",
+            "discounts"
+        ],
+        "versioningStrategy": "rollout-based",
+        "branch": "main"
     }
 ]

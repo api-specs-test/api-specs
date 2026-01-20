@@ -36,9 +36,7 @@ jobs:
       - name: Check for updates
         id: check_updates
         run: |
-          # Move UPDATE_SUMMARY.txt from dependabot directory to root
-          if [ -f "dependabot/UPDATE_SUMMARY.txt" ]; then
-            mv dependabot/UPDATE_SUMMARY.txt UPDATE_SUMMARY.txt
+          if [ -f "UPDATE_SUMMARY.txt" ]; then
             echo "updates_found=true" >> $GITHUB_OUTPUT
             echo "📋 Updates detected!"
           else
@@ -88,7 +86,7 @@ jobs:
             --head "$BRANCH_NAME" \
             --label "openapi-update,automated,dependencies"
           echo "✅ Pull Request created successfully!"
-          # REMOVE THIS LINE: rm -f UPDATE_SUMMARY.txt  
+          
       - name: Trigger Connector Regeneration
         if: steps.check_updates.outputs.updates_found == 'true'
         env:

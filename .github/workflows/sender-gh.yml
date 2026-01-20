@@ -6,13 +6,16 @@ on:
 jobs:
   trigger:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Trigger workflow in ballerina-library-test org
+      - name: Trigger Auto-Generate Connector workflow
         env:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           gh api \
             repos/ballerina-library-test/module-ballerinax-docusign.dsadmin/dispatches \
             -X POST \
-            -f event_type=trigger-from-api-specs-test \
-            -f client_payload[sender]=api-specs-test/api-specs
+            -f event_type=openapi-update \
+            -f client_payload[sender]=api-specs-test/api-specs \
+            -f client_payload[openapi_url]=https://raw.githubusercontent.com/docusign/OpenAPI-Specifications/master/admin.rest.swagger-v2.1.json \
+            -f client_payload[spec_version]=v2.1

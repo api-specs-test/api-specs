@@ -97,7 +97,7 @@ jobs:
           
           # Read all updated specs from UPDATE_SUMMARY.txt
           while IFS= read -r line; do
-            if [[ $line =~ Updated:\ ([^/]+)/([^\ ]+)\ ]]; then
+            if [[ $line =~ Updated:[[:space:]]([^/]+)/([^[:space:]]+)[[:space:]] ]]; then
               VENDOR="${BASH_REMATCH[1]}"
               API="${BASH_REMATCH[2]}"
               

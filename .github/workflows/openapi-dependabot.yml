@@ -95,11 +95,21 @@ jobs:
         run: |
           echo "🚀 Triggering connector regeneration..."
           
+          # Check if UPDATE_SUMMARY.txt exists
+          if [ ! -f "UPDATE_SUMMARY.txt" ]; then
+            echo "⚠️ UPDATE_SUMMARY.txt not found, skipping connector triggers"
+            exit 0
+          fi
+          
           # Read all updated specs from UPDATE_SUMMARY.txt
           while IFS= read -r line; do
-            if [[ $line =~ Updated:[[:space:]]([^/]+)/([^[:space:]]+)[[:space:]] ]]; then
-              VENDOR="${BASH_REMATCH[1]}"
-              API="${BASH_REMATCH[2]}"
+            # Parse format: "- vendor/api: oldver → newver (API vXXX)"
+            if echo "$line" | grep -q "^-"; then
+              # Extract vendor/api part (between "- " and ":")
+              SPEC_PATH=$(echo "$line" | sed 's/^- \(.*\):.*/\1/' | xargs)
+              VENDOR=$(echo "$SPEC_PATH" | cut -d'/' -f1)
+              API=$(echo "$SPEC_PATH" | cut -d'/' -f2)
+              API=$(echo "$SPEC_PATH" | cut -d'/' -f2)
               
               # Find connector repo from repos.json
               CONNECTOR_REPO=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .connectorRepo" repos.json)

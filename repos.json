@@ -15,7 +15,8 @@
             "payments",
             "billing"
         ],
-        "versioningStrategy": "release-tag"
+        "versioningStrategy": "release-tag",
+        "branch": null
     },
     {
         "vendor": "twilio",
@@ -23,7 +24,7 @@
         "owner": "twilio",
         "repo": "twilio-oai",
         "name": "Twilio API",
-        "lastVersion": "1.51.0",
+        "lastVersion": "2.6.1",
         "specPath": "spec/json/twilio_api_v2010.json",
         "releaseAssetName": "twilio_api_v2010.json",
         "baseUrl": "https://api.twilio.com",
@@ -33,7 +34,8 @@
             "sms",
             "voice"
         ],
-        "versioningStrategy": "release-tag"
+        "versioningStrategy": "release-tag",
+        "branch": null
     },
     {
         "vendor": "openai",
@@ -41,7 +43,7 @@
         "owner": "openai",
         "repo": "openai-openapi",
         "name": "OpenAI API",
-        "lastVersion": "1.0.0",
+        "lastVersion": "2.0.0",
         "specPath": "openapi.yaml",
         "releaseAssetName": "openapi.yaml",
         "baseUrl": "https://api.openai.com",
@@ -51,7 +53,8 @@
             "ai",
             "gpt"
         ],
-        "versioningStrategy": "release-tag"
+        "versioningStrategy": "release-tag",
+        "branch": null
     },
     {
         "vendor": "docusign",
@@ -97,7 +100,7 @@
         "owner": "docusign",
         "repo": "OpenAPI-Specifications",
         "name": "DocuSign eSignature API",
-        "lastVersion": "2.1",
+        "lastVersion": "v2.1",
         "specPath": "esignature.rest.swagger-v2.1.json",
         "releaseAssetName": "esignature.rest.swagger-v2.1.json",
         "baseUrl": "https://api.docusign.com",

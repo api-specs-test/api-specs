@@ -1,1 +1,22 @@
-[{"vendor":"docusign", "api":"admin", "owner":"docusign", "repo":"OpenAPI-Specifications", "name":"DocuSign Admin API", "lastVersion":"v2.1", "specPath":"admin.rest.swagger-v2.1.json", "releaseAssetName":"admin.rest.swagger-v2.1.json", "baseUrl":"https://api.docusign.com", "documentationUrl":"https://developers.docusign.com/docs/admin-api", "description":"DocuSign Admin API for account management", "tags":["document-signing", "admin"], "versioningStrategy":"file-based", "branch":"master", "connectorRepo":"ballerina-library-test/module-ballerinax-docusign.dsadmin"}]
+[
+    {
+        "vendor": "docusign",
+        "api": "admin",
+        "owner": "docusign",
+        "repo": "OpenAPI-Specifications",
+        "name": "DocuSign Admin API",
+        "lastVersion": "v2.1",
+        "specPath": "admin.rest.swagger-v2.1.json",
+        "releaseAssetName": "admin.rest.swagger-v2.1.json",
+        "baseUrl": "https://api.docusign.com",
+        "documentationUrl": "https://developers.docusign.com/docs/admin-api",
+        "description": "DocuSign Admin API for account management",
+        "tags": [
+            "document-signing",
+            "admin"
+        ],
+        "versioningStrategy": "file-based",
+        "branch": "master",
+        "connectorRepo": "ballerina-library-test/module-ballerinax-docusign.dsadmin"
+    }
+]

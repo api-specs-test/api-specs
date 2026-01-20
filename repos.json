@@ -14,7 +14,8 @@
         "tags": [
             "payments",
             "billing"
-        ]
+        ],
+        "versioningStrategy": "release-tag"
     },
     {
         "vendor": "twilio",
@@ -31,7 +32,8 @@
         "tags": [
             "sms",
             "voice"
-        ]
+        ],
+        "versioningStrategy": "release-tag"
     },
     {
         "vendor": "openai",
@@ -48,6 +50,67 @@
         "tags": [
             "ai",
             "gpt"
-        ]
+        ],
+        "versioningStrategy": "release-tag"
+    },
+    {
+        "vendor": "docusign",
+        "api": "admin",
+        "owner": "docusign",
+        "repo": "OpenAPI-Specifications",
+        "name": "DocuSign Admin API",
+        "lastVersion": "master",
+        "specPath": "admin.rest.swagger-v2.1.json",
+        "releaseAssetName": "admin.rest.swagger-v2.1.json",
+        "baseUrl": "https://api.docusign.com",
+        "documentationUrl": "https://developers.docusign.com/docs/admin-api",
+        "description": "DocuSign Admin API for account management",
+        "tags": [
+            "document-signing",
+            "admin"
+        ],
+        "versioningStrategy": "file-based",
+        "branch": "master",
+        "lastHash": null
+    },
+    {
+        "vendor": "docusign",
+        "api": "click",
+        "owner": "docusign",
+        "repo": "OpenAPI-Specifications",
+        "name": "DocuSign Click API",
+        "lastVersion": "master",
+        "specPath": "click.rest.swagger-v2.json",
+        "releaseAssetName": "click.rest.swagger-v2.json",
+        "baseUrl": "https://api.docusign.com",
+        "documentationUrl": "https://developers.docusign.com/docs/click-api",
+        "description": "DocuSign Click API for clickwrap agreements",
+        "tags": [
+            "document-signing",
+            "clickwrap"
+        ],
+        "versioningStrategy": "file-based",
+        "branch": "master",
+        "lastHash": null
+    },
+    {
+        "vendor": "docusign",
+        "api": "esignature",
+        "owner": "docusign",
+        "repo": "OpenAPI-Specifications",
+        "name": "DocuSign eSignature API",
+        "lastVersion": "master",
+        "specPath": "esignature.rest.swagger-v2.1.json",
+        "releaseAssetName": "esignature.rest.swagger-v2.1.json",
+        "baseUrl": "https://api.docusign.com",
+        "documentationUrl": "https://developers.docusign.com/docs/esign-rest-api",
+        "description": "DocuSign eSignature API for electronic signatures",
+        "tags": [
+            "document-signing",
+            "esignature"
+        ],
+        "versioningStrategy": "file-based",
+        "branch": "master",
+        "lastHash": null
     }
 ]

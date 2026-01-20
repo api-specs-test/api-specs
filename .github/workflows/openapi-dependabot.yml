@@ -87,3 +87,43 @@ jobs:
             --label "openapi-update,automated,dependencies"
           echo "✅ Pull Request created successfully!"
           rm -f UPDATE_SUMMARY.txt
+
+      - name: Trigger Connector Regeneration
+        if: steps.check_updates.outputs.updates_found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          echo "🚀 Triggering connector regeneration..."
+          
+          # Read all updated specs from UPDATE_SUMMARY.txt
+          while IFS= read -r line; do
+            if [[ $line =~ Updated:\ ([^/]+)/([^\ ]+)\ ]]; then
+              VENDOR="${BASH_REMATCH[1]}"
+              API="${BASH_REMATCH[2]}"
+              
+              # Find connector repo from repos.json
+              CONNECTOR_REPO=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .connectorRepo" repos.json)
+              
+              if [ -n "$CONNECTOR_REPO" ] && [ "$CONNECTOR_REPO" != "null" ]; then
+                echo "📡 Triggering update for $CONNECTOR_REPO"
+                
+                # Get spec version and URL
+                VERSION=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .lastVersion" repos.json)
+                SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/${VENDOR}/${API}/${VERSION}/openapi.yaml"
+                
+                # Trigger repository_dispatch event
+                gh api repos/"$CONNECTOR_REPO"/dispatches \
+                  -f event_type=openapi-update \
+                  -f "client_payload[openapi_url]=$SPEC_URL" \
+                  -f "client_payload[spec_version]=$VERSION" \
+                  -f "client_payload[vendor]=$VENDOR" \
+                  -f "client_payload[api]=$API"
+                
+                echo "✅ Triggered for $CONNECTOR_REPO"
+              else
+                echo "⚠️  No connector repo found for $VENDOR/$API"
+              fi
+            fi
+          done < UPDATE_SUMMARY.txt
+          
+          echo "✅ All connector regenerations triggered!"

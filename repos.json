@@ -15,7 +15,8 @@
             "payments",
             "billing"
         ],
-        "versioningStrategy": "release-tag"
+        "versioningStrategy": "release-tag",
+        "branch": null
     },
     {
         "vendor": "twilio",
@@ -33,7 +34,8 @@
             "sms",
             "voice"
         ],
-        "versioningStrategy": "release-tag"
+        "versioningStrategy": "release-tag",
+        "branch": null
     },
     {
         "vendor": "openai",
@@ -51,7 +53,8 @@
             "ai",
             "gpt"
         ],
-        "versioningStrategy": "release-tag"
+        "versioningStrategy": "release-tag",
+        "branch": null
     },
     {
         "vendor": "docusign",
@@ -97,7 +100,7 @@
         "owner": "docusign",
         "repo": "OpenAPI-Specifications",
         "name": "DocuSign eSignature API",
-        "lastVersion": "2.1",
+        "lastVersion": "v2.1",
         "specPath": "esignature.rest.swagger-v2.1.json",
         "releaseAssetName": "esignature.rest.swagger-v2.1.json",
         "baseUrl": "https://api.docusign.com",
@@ -135,8 +138,8 @@
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
         "name": "HubSpot CRM Associations API",
-        "lastVersion": "50914",
-        "specPath": "PublicApiSpecs/CRM/Associations/Rollouts/50914/v4/associations.json",
+        "lastVersion": "130902",
+        "specPath": "PublicApiSpecs/CRM/Associations/Rollouts/130902/v4/associations.json",
         "releaseAssetName": "associations.json",
         "baseUrl": "https://api.hubapi.com",
         "documentationUrl": "https://developers.hubspot.com/docs/api/crm/associations",
@@ -154,8 +157,8 @@
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
         "name": "HubSpot CRM Associations Schema API",
-        "lastVersion": "50914",
-        "specPath": "PublicApiSpecs/CRM/Associations Schema/Rollouts/50914/v4/associationsSchema.json",
+        "lastVersion": "130902",
+        "specPath": "PublicApiSpecs/CRM/Associations Schema/Rollouts/130902/v4/associationsSchema.json",
         "releaseAssetName": "associationsSchema.json",
         "baseUrl": "https://api.hubapi.com",
         "documentationUrl": "https://developers.hubspot.com/docs/api/crm/associations",

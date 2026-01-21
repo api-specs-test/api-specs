@@ -1,4 +1,4 @@
-name: Sender Workflow via GH CLI - Twilio
+name: Sender Workflow via GH CLI - OpenAI
 
 on:
   workflow_dispatch:
@@ -8,14 +8,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Auto-Generate Connector workflow for Twilio
+      - name: Trigger Auto-Generate Connector workflow for OpenAI
         env:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           gh api \
-            repos/ballerina-library-test/module-ballerinax-twilio/dispatches \
+            repos/ballerina-library-test/module-ballerinax-openai/dispatches \
             -X POST \
             -f event_type=openapi-update \
             -f client_payload[sender]=api-specs-test/api-specs \
-            -f client_payload[openapi_url]=https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/twilio/twilio/2.6.1/openapi.yaml \
-            -f client_payload[spec_version]=2.6.1
+            -f client_payload[openapi_url]=https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/openai/openai/2.0.0/openapi.yaml \
+            -f client_payload[spec_version]=2.0.0

@@ -1,4 +1,4 @@
-name: Sender Workflow via GH CLI - OpenAI
+name: Sender Workflow via GH CLI - Stripe
 
 on:
   workflow_dispatch:
@@ -8,14 +8,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Auto-Generate Connector workflow for OpenAI
+      - name: Trigger Auto-Generate Connector workflow for Stripe
         env:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           gh api \
-            repos/ballerina-library-test/module-ballerinax-openai/dispatches \
+            repos/ballerina-library-test/module-ballerinax-stripe/dispatches \
             -X POST \
             -f event_type=openapi-update \
             -f client_payload[sender]=api-specs-test/api-specs \
-            -f client_payload[openapi_url]=https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/openai/openai/2.0.0/openapi.yaml \
-            -f client_payload[spec_version]=2.0.0
+            -f client_payload[openapi_url]=https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/stripe/stripe/2026-01-28.clover/openapi.yaml \
+            -f client_payload[spec_version]=2026-01-28.clover

@@ -1,4 +1,4 @@
-name: Sender Workflow via GH CLI - HubSpot CRM Commerce Discounts
+name: Sender Workflow via GH CLI - Petstore
 
 on:
   workflow_dispatch:
@@ -8,14 +8,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Auto-Generate Connector workflow for HubSpot CRM Commerce Discounts
+      - name: Trigger Auto-Generate Connector workflow for Petstore
         env:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           gh api \
-            repos/ballerina-library-test/module-ballerinax-hubspot.crm.commerce.discounts/dispatches \
+            repos/ballerina-library-test/module-ballerinax-petstore/dispatches \
             -X POST \
             -f event_type=openapi-update \
-            -f client_payload[sender]=ballerina-library-test/module-ballerinax-hubspot.crm.commerce.discounts \
-            -f client_payload[openapi_url]=https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/hubspot/crm.commerce.discounts/v3/openapi.yaml \
+            -f client_payload[sender]=ballerina-library-test/module-ballerinax-petstore \
+            -f client_payload[openapi_url]=https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/petstore/openapi.yaml \
             -f client_payload[spec_version]=main

@@ -13,9 +13,9 @@ jobs:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           gh api \
-            repos/ballerina-library-test/module-ballerinax-petstore/dispatches \
+            repos/ballerina-library-test/module-ballerinax-hubspot.crm.commerce.carts/dispatches \
             -X POST \
             -f event_type=openapi-update \
-            -f client_payload[sender]=ballerina-library-test/module-ballerinax-petstore \
+            -f client_payload[sender]=ballerina-library-test/module-ballerinax-hubspot.crm.commerce.carts \
             -f client_payload[openapi_url]=https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/petstore/openapi.yaml \
             -f client_payload[spec_version]=main

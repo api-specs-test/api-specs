@@ -513,31 +513,19 @@ function processFileBasedRepo(Repository repo) returns UpdateResult|error? {
         string versionDir = "../openapi/" + repo.vendor + "/" + repo.api + "/" + apiVersion;
         string localPath = versionDir + "/openapi.yaml";
 
-        // For content-only changes, add timestamp to avoid overwrites
+        // For content-only changes in same version, REPLACE existing files
         if !versionChanged && contentChanged {
-            time:Utc currentTime = time:utcNow();
-            string timestamp = currentTime[0].toString();
-            versionDir = versionDir + "-rev" + timestamp;
-            localPath = versionDir + "/openapi.yaml";
-            io:println(string `  📝 Content update without version change - creating revision: ${timestamp}`);
+            io:println(string `  🔄 Content update in same version ${apiVersion} - replacing existing files`);
         }
 
-        // Check if this version already exists
-        boolean dirExists = check file:test(versionDir, file:EXISTS);
-        if dirExists {
-            io:println(string `  ⚠️  Version directory already exists: ${versionDir}`);
-            io:println("  ℹ️  Skipping duplicate download");
-            return ();
-        }
-
-        // Save the spec
+        // Save the spec (will overwrite if exists)
         error? saveResult = saveSpec(specContent, localPath);
         if saveResult is error {
             io:println("  ❌ Save failed: " + saveResult.message());
             return error(saveResult.message());
         }
 
-        // Create metadata.json
+        // Create/update metadata.json
         error? metadataResult = createMetadataFile(repo, apiVersion, versionDir);
         if metadataResult is error {
             io:println("  ⚠️  Metadata creation failed: " + metadataResult.message());
@@ -640,31 +628,19 @@ function processRolloutBasedRepo(Repository repo) returns UpdateResult|error? {
         string versionDir = "../openapi/" + repo.vendor + "/" + repo.api + "/rollout-" + latestRollout;
         string localPath = versionDir + "/openapi.yaml";
 
-        // For content-only changes in same rollout, add revision timestamp
+        // For content-only changes in same rollout, REPLACE existing files
         if !rolloutChanged && contentChanged {
-            time:Utc currentTime = time:utcNow();
-            string timestamp = currentTime[0].toString();
-            versionDir = versionDir + "-rev" + timestamp;
-            localPath = versionDir + "/openapi.yaml";
-            io:println(string `  📝 Content update within rollout ${latestRollout} - creating revision: ${timestamp}`);
+            io:println(string `  🔄 Content update within rollout ${latestRollout} - replacing existing files`);
         }
 
-        // Check if this rollout already exists
-        boolean dirExists = check file:test(versionDir, file:EXISTS);
-        if dirExists && rolloutChanged {
-            io:println(string `  ⚠️  Rollout directory already exists: ${versionDir}`);
-            io:println("  ℹ️  Skipping duplicate download");
-            return ();
-        }
-
-        // Save the spec
+        // Save the spec (will overwrite if exists for content-only updates)
         error? saveResult = saveSpec(specContent, localPath);
         if saveResult is error {
             io:println("  ❌ Save failed: " + saveResult.message());
             return error(saveResult.message());
         }
 
-        // Create metadata.json
+        // Create/update metadata.json
         error? metadataResult = createMetadataFile(repo, latestRollout, versionDir);
         if metadataResult is error {
             io:println("  ⚠️  Metadata creation failed: " + metadataResult.message());
@@ -807,9 +783,13 @@ public function main() returns error? {
             "### Changes:\n" + summaryContent + "\n\n" +
             "### Files Changed:\n" + filesChangedContent + "\n" +
             "### Update Types:\n" +
-            "- 🆕 **Version update**: New API version released\n" +
-            "- 📝 **Content update**: Changes within same version (spec refinements, fixes)\n" +
+            "- 🆕 **Version update**: New API version/rollout released (creates new directory)\n" +
+            "- 📝 **Content update**: Changes within same version/rollout (replaces existing files)\n" +
             "- 🔄 **Both**: Version change + content modifications\n\n" +
+            "### Important Notes:\n" +
+            "- Content-only updates **replace** files in existing directories to maintain single source of truth\n" +
+            "- Version/rollout changes create new directories to preserve history\n" +
+            "- All changes are tracked via SHA-256 content hashing\n\n" +
             "### Checklist:\n" +
             "- [ ] Review specification changes\n" +
             "- [ ] Verify connector generation works\n" +

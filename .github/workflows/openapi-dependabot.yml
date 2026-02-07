@@ -115,9 +115,18 @@ jobs:
               if [ -n "$CONNECTOR_REPO" ] && [ "$CONNECTOR_REPO" != "null" ]; then
                 echo "📡 Triggering update for $CONNECTOR_REPO"
 
-                # Get spec version and URL
+                # Get spec version, versioning strategy and construct URL
                 VERSION=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .lastVersion" repos.json)
-                SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/${VENDOR}/${API}/${VERSION}/openapi.yaml"
+                VERSIONING_STRATEGY=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .versioningStrategy" repos.json)
+
+                # For rollout-based strategy, the folder is prefixed with "rollout-"
+                if [ "$VERSIONING_STRATEGY" = "rollout-based" ]; then
+                  VERSION_DIR="rollout-${VERSION}"
+                else
+                  VERSION_DIR="${VERSION}"
+                fi
+
+                SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/${VENDOR}/${API}/${VERSION_DIR}/openapi.yaml"
 
                 # Trigger repository_dispatch event using gh CLI
                 gh api \

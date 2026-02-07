@@ -1,20 +1,20 @@
 [
 
     {
-        "vendor": "hubspot",
-        "api": "marketing.forms",
+         "vendor": "hubspot",
+        "api": "crm.associations",
         "owner": "HubSpot",
         "repo": "HubSpot-public-api-spec-collection",
-        "name": "HubSpot Marketing Forms API",
-        "lastVersion": "144909",
-        "specPath": "PublicApiSpecs/Marketing/Forms/Rollouts/144909/v3/forms.json",
-        "releaseAssetName": "forms.json",
+        "name": "HubSpot CRM Associations API",
+        "lastVersion": "50914",
+        "specPath": "PublicApiSpecs/CRM/Associations/Rollouts/50914/v4/associations.json",
+        "releaseAssetName": "associations.json",
         "baseUrl": "https://api.hubapi.com",
-        "documentationUrl": "https://developers.hubspot.com/docs/guides/api/marketing/forms",
-        "description": "HubSpot Marketing Forms API for creating and managing forms",
+        "documentationUrl": "https://developers.hubspot.com/docs/api/crm/associations",
+        "description": "HubSpot CRM Associations API",
         "tags": [
-            "marketing",
-            "forms"
+            "crm",
+            "associations"
         ],
         "versioningStrategy": "rollout-based",
         "branch": "main",

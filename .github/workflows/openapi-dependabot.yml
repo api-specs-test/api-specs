@@ -100,11 +100,17 @@ jobs:
             exit 0
           fi
 
+          echo "📄 UPDATE_SUMMARY.txt contents:"
+          cat UPDATE_SUMMARY.txt
+          echo ""
+
           # Read all updated specs from UPDATE_SUMMARY.txt
-          while IFS= read -r line; do
+          while IFS= read -r line || [ -n "$line" ]; do
+            echo "🔍 Processing line: $line"
+
             # Parse format: "🔄 vendor/api: oldver → newver (type update)"
-            # Match lines that contain the arrow character (→) indicating an update
-            if echo "$line" | grep -q "→"; then
+            # Match lines that contain vendor/api pattern with colon
+            if echo "$line" | grep -qE "^.+/.+:"; then
               # Extract vendor/api part (after emoji and before ":")
               # Format: 🔄 hubspot/crm.associations: rollout-50914 → rollout-130902 (both update)
               SPEC_PATH=$(echo "$line" | sed 's/^[^a-zA-Z]*\([a-zA-Z][^:]*\):.*/\1/' | xargs)
@@ -123,6 +129,9 @@ jobs:
                 VERSION=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .lastVersion" repos.json)
                 VERSIONING_STRATEGY=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .versioningStrategy" repos.json)
 
+                echo "📌 Version from repos.json: $VERSION"
+                echo "📌 Versioning strategy: $VERSIONING_STRATEGY"
+
                 # For rollout-based strategy, the folder is prefixed with "rollout-"
                 if [ "$VERSIONING_STRATEGY" = "rollout-based" ]; then
                   VERSION_DIR="rollout-${VERSION}"
@@ -136,6 +145,7 @@ jobs:
                 echo "📎 Spec URL: $SPEC_URL"
 
                 # Trigger repository_dispatch event using gh CLI
+                echo "🚀 Sending repository_dispatch to $CONNECTOR_REPO..."
                 gh api \
                   repos/"$CONNECTOR_REPO"/dispatches \
                   -X POST \

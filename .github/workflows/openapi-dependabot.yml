@@ -88,7 +88,7 @@ jobs:
           echo "✅ Pull Request created successfully!"
 
       - name: Trigger Connector Regeneration
-        if: steps.check_updates.outputs.updates_found == 'true'
+        if: steps.check_updates.outputs.updates_found == 'true' && env.BRANCH_NAME != ''
         env:
           GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
@@ -102,12 +102,16 @@ jobs:
 
           # Read all updated specs from UPDATE_SUMMARY.txt
           while IFS= read -r line; do
-            # Parse format: "- vendor/api: oldver → newver (API vXXX)"
-            if echo "$line" | grep -q "^-"; then
-              # Extract vendor/api part (between "- " and ":")
-              SPEC_PATH=$(echo "$line" | sed 's/^- \(.*\):.*/\1/' | xargs)
+            # Parse format: "🔄 vendor/api: oldver → newver (type update)"
+            # Match lines that contain the arrow character (→) indicating an update
+            if echo "$line" | grep -q "→"; then
+              # Extract vendor/api part (after emoji and before ":")
+              # Format: 🔄 hubspot/crm.associations: rollout-50914 → rollout-130902 (both update)
+              SPEC_PATH=$(echo "$line" | sed 's/^[^a-zA-Z]*\([a-zA-Z][^:]*\):.*/\1/' | xargs)
               VENDOR=$(echo "$SPEC_PATH" | cut -d'/' -f1)
               API=$(echo "$SPEC_PATH" | cut -d'/' -f2)
+
+              echo "📋 Detected update for: $VENDOR/$API"
 
               # Find connector repo from repos.json
               CONNECTOR_REPO=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .connectorRepo" repos.json)
@@ -126,17 +130,19 @@ jobs:
                   VERSION_DIR="${VERSION}"
                 fi
 
-                SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/main/openapi/${VENDOR}/${API}/${VERSION_DIR}/openapi.yaml"
+                # Use the branch name where the spec was pushed (not main, since PR is not merged yet)
+                SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/${BRANCH_NAME}/openapi/${VENDOR}/${API}/${VERSION_DIR}/openapi.yaml"
+
+                echo "📎 Spec URL: $SPEC_URL"
 
                 # Trigger repository_dispatch event using gh CLI
                 gh api \
                   repos/"$CONNECTOR_REPO"/dispatches \
                   -X POST \
                   -f event_type=openapi-update \
+                  -f client_payload[sender]=api-specs-test/api-specs \
                   -f client_payload[openapi_url]="$SPEC_URL" \
-                  -f client_payload[spec_version]="$VERSION" \
-                  -f client_payload[vendor]="$VENDOR" \
-                  -f client_payload[api]="$API"
+                  -f client_payload[spec_version]="$VERSION_DIR"
 
                 echo "✅ Triggered for $CONNECTOR_REPO"
               else

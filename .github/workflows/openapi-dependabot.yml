@@ -119,7 +119,6 @@ jobs:
         run: |
           echo "🚀 Triggering connector regeneration..."
 
-          # Check if UPDATE_SUMMARY.txt exists
           if [ ! -f "UPDATE_SUMMARY.txt" ]; then
             echo "⚠️ UPDATE_SUMMARY.txt not found, skipping connector triggers"
             exit 0
@@ -129,46 +128,46 @@ jobs:
           cat UPDATE_SUMMARY.txt
           echo ""
 
-          # Read all updated specs from UPDATE_SUMMARY.txt
           while IFS= read -r line || [ -n "$line" ]; do
             echo "🔍 Processing line: $line"
 
-            # Parse format: "🔄 vendor/api: oldver → newver (type update)"
-            # Match lines that contain vendor/api pattern with colon
             if echo "$line" | grep -qE "^.+/.+:"; then
-              # Extract vendor/api part (after emoji and before ":")
               SPEC_PATH=$(echo "$line" | sed 's/^[^a-zA-Z]*\([a-zA-Z][^:]*\):.*/\1/' | xargs)
               VENDOR=$(echo "$SPEC_PATH" | cut -d'/' -f1)
               API=$(echo "$SPEC_PATH" | cut -d'/' -f2)
 
               echo "📋 Detected update for: $VENDOR/$API"
 
-              # Find connector repo from repos.json
               CONNECTOR_REPO=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .connectorRepo" repos.json)
 
               if [ -n "$CONNECTOR_REPO" ] && [ "$CONNECTOR_REPO" != "null" ]; then
                 echo "📡 Triggering update for $CONNECTOR_REPO"
 
-                # Get spec version, versioning strategy and construct URL
-                VERSION=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .lastVersion" repos.json)
                 VERSIONING_STRATEGY=$(jq -r ".[] | select(.vendor==\"$VENDOR\" and .api==\"$API\") | .versioningStrategy" repos.json)
-
-                echo "📌 Version from repos.json: $VERSION"
                 echo "📌 Versioning strategy: $VERSIONING_STRATEGY"
 
-                # For rollout-based strategy, the folder is prefixed with "rollout-"
+                # Determine VERSION_DIR by looking at what folder was actually created
+                OPENAPI_DIR="openapi/${VENDOR}/${API}"
+
                 if [ "$VERSIONING_STRATEGY" = "rollout-based" ]; then
-                  VERSION_DIR="rollout-${VERSION}"
+                  # For rollout-based, folder is prefixed with "rollout-"
+                  VERSION_DIR=$(ls -d ${OPENAPI_DIR}/rollout-* 2>/dev/null | sort -V | tail -1 | xargs basename)
                 else
-                  VERSION_DIR="${VERSION}"
+                  # For release-tag and file-based, find the actual folder created
+                  # (it's named after the API version inside the spec, NOT the release tag)
+                  VERSION_DIR=$(ls -d ${OPENAPI_DIR}/*/ 2>/dev/null | sort -V | tail -1 | xargs basename)
                 fi
 
-                # Use the branch name where the spec was pushed (not main, since PR is not merged yet)
-                SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/${BRANCH_NAME}/openapi/${VENDOR}/${API}/${VERSION_DIR}/openapi.yaml"
+                if [ -z "$VERSION_DIR" ]; then
+                  echo "⚠️  Could not determine version directory for $VENDOR/$API, skipping"
+                  continue
+                fi
 
+                echo "📌 Actual version directory: $VERSION_DIR"
+
+                SPEC_URL="https://raw.githubusercontent.com/api-specs-test/api-specs/${BRANCH_NAME}/openapi/${VENDOR}/${API}/${VERSION_DIR}/openapi.yaml"
                 echo "📎 Spec URL: $SPEC_URL"
 
-                # Trigger repository_dispatch event using gh CLI
                 echo "🚀 Sending repository_dispatch to $CONNECTOR_REPO..."
                 gh api \
                   repos/"$CONNECTOR_REPO"/dispatches \
